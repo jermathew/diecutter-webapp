@@ -40,38 +40,41 @@ function on_discovery(peripheral) {
       
   if (encoded_data[0] == 0x99 && encoded_data[1] == 0x04 && encoded_data[2] == 5) {
     
-    // if no packets for 60 seconds, device is disconnected
-    clearTimeout(idTimeout);
-    idTimeout = setTimeout(reset, 60000);
+    if (peripheral.address === "f7:7e:cc:52:29:d0"){
+    	// if no packets for 60 seconds, device is disconnected
+	    clearTimeout(idTimeout);
+	    idTimeout = setTimeout(reset, 60000);
 
-    // first ruuvi packet received
-    if (first_data) {
-      idInterval = setInterval(checkList, 15000);
-      first_data = false;
+	    // first ruuvi packet received
+	    if (first_data) {
+	      idInterval = setInterval(checkList, 15000);
+	      first_data = false;
+	    }
+
+	    statusEmitter.emit('connected', peripheral.address);
+	    
+	    let data_slice = encoded_data.slice(2);
+
+	    decoded_data = decode_data(data_slice);
+	    decoded_data["mac"] = peripheral.address;
+
+	    console.log(peripheral.address + '  RSSI -> ' + peripheral.rssi);
+	    //console.log(decoded_data);
+
+	    updateList(temporary_mac, peripheral.address);
+
+	    // write in the database only the packet of the closer device
+	    if (peripheral.address === updateDictionary(actual_mac, peripheral.address, peripheral.rssi)) {
+	      console.log("Writing the data of " + peripheral.address);
+	      influx.write(decoded_data);
+	    }
+
+	    console.log(actual_mac);
+	    console.log(temporary_mac);
+	    console.log();
+	    console.log();
     }
 
-    statusEmitter.emit('connected', peripheral.address);
-    
-    let data_slice = encoded_data.slice(2);
-
-    decoded_data = decode_data(data_slice);
-    decoded_data["mac"] = peripheral.address;
-
-    console.log(peripheral.address + '  RSSI -> ' + peripheral.rssi);
-    //console.log(decoded_data);
-
-    updateList(temporary_mac, peripheral.address);
-
-    // write in the database only the packet of the closer device
-    if (peripheral.address === updateDictionary(actual_mac, peripheral.address, peripheral.rssi)) {
-      console.log("Writing the data of " + peripheral.address);
-      influx.write(decoded_data);
-    }
-
-    console.log(actual_mac);
-    console.log(temporary_mac);
-    console.log();
-    console.log();
   }
 }
 
